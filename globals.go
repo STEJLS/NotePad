@@ -8,5 +8,11 @@ var logSource string
 // ConfigSource - имя файла для конфига, задается через флаг командной строки.
 var configSource string
 
-// noteDBsession - указатель на сессию подключения к БД notepad.
-var noteDBsession *mgo.Session
+// DBsession - указатель на сессию подключения к серверу БД.
+var DBsession *mgo.Session
+
+// userColl - указатель на коллекции Users базы данных notepad.
+var usersColl *mgo.Collection
+
+// salt - соль для пароля.
+var salt = [12]byte{152, 123, 2, 1, 6, 84, 216, 35, 140, 158, 69, 128}

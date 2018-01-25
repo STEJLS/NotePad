@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"./XMLconfig"
+	"github.com/STEJLS/notepad/XMLconfig"
 )
 
 func main() {
@@ -16,13 +16,14 @@ func main() {
 	config := XMLconfig.Parse(configSource)
 
 	connectToDB(config.Db.Host, config.Db.Port, config.Db.Name)
-	defer noteDBsession.Close()
+	defer DBsession.Close()
 
 	server := http.Server{
 		Addr: fmt.Sprintf("%v:%v", config.HTTP.Host, config.HTTP.Port),
 	}
 
-	http.HandleFunc("/test", test)
+	http.HandleFunc("/registrationPage", registrationPage)
+	http.HandleFunc("/registrationHandler", registrationHandler)
 
 	err := server.ListenAndServe()
 	if err != nil {
