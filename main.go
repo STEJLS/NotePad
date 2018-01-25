@@ -23,7 +23,10 @@ func main() {
 	}
 
 	http.HandleFunc("/registrationPage", registrationPage)
+	http.HandleFunc("/authorizationPage", authorizationPage)
 	http.HandleFunc("/registrationHandler", registrationHandler)
+	http.HandleFunc("/authorizationHandler", authorizationHandler)
+	http.HandleFunc("/test", test)
 
 	err := server.ListenAndServe()
 	if err != nil {

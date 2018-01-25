@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/satori/go.uuid"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -97,7 +98,7 @@ func sendErrorPage(w http.ResponseWriter, err *Error) {
 					<h1>Произошла ошибка!</h1>
 					<p>Статус: ` + strconv.Itoa(err.Status) + `</p>
 					<p>Информация: ` + err.Text + `</p>
-					<p><a href="/registrationPage">Регистрация</a></p>
+					<p><a href="/registrationPage">Регистрация</a> <a href="/authorizationPage">  Авторизация</a></p>
 				</div>
 			</body>
 		</html>		
@@ -117,4 +118,15 @@ func generateMD5hash(password string) [md5.Size]byte {
 	}
 
 	return md5.Sum(temp)
+}
+
+// generateToken - генерирует уникальный токен для авторизации.
+func generateToken() string {
+	token, err := uuid.NewV4()
+
+	if err != nil {
+		log.Println("Ошибка. При генерации токена: " + err.Error())
+	}
+
+	return token.String()
 }

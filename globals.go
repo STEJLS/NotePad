@@ -16,3 +16,6 @@ var usersColl *mgo.Collection
 
 // salt - соль для пароля.
 var salt = [12]byte{152, 123, 2, 1, 6, 84, 216, 35, 140, 158, 69, 128}
+
+// sessions - карта для авторизации пользователей. Ключ токен, а значение - логин.
+var sessions = make(map[string]string)
