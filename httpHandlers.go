@@ -5,84 +5,10 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"gopkg.in/mgo.v2/bson"
 )
-
-// registrationPage - вывод статической страницы регистрации.
-func registrationPage(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(`<!DOCTYPE html>
-		<head>
-				<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-			  <title>NotePad</title>
-			  <style>
-				  .center {
-				   width: 250px; /* Ширина элемента в пикселах */
-				   padding: 10px; /* Поля вокруг текста */
-				   margin: auto; /* Выравниваем по центру */
-				   background: #fc0; /* Цвет фона */
-				  }
-				 </style>
-		</head>
-		<body>
-		<p><a href="/authorizationPage">Авторизация</a></p>
-			<form method="post" enctype="application/x-www-form-urlencoded" action="/registrationHandler" class="center">
-			<h3>Страница регистрации</h3>
-			<p>
-			  <label>Логин:</label>
-			  <input type="text"  name="login">
-			</p>		
-			<p>
-
-			  <label >Пароль*:</label>
-			  <input type="password"  name="password">
-			</p>		
-			<p class="login-submit">
-			  <button type="submit" class="login-button">Регистрация</button>
-			</p>
-			<p><font size="2" color="red" face="Arial">* - минимум 7 символов</font></p>
-
-		  </form>
-		</body>
-		</html>		
-		`))
-}
-
-// authorizationPage - вывод статической страницы авторизации.
-func authorizationPage(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(`<!DOCTYPE html>
-		<head>
-				<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-			  <title>NotePad</title>
-			  <style>
-				  .center {
-				   width: 250px; /* Ширина элемента в пикселах */
-				   padding: 10px; /* Поля вокруг текста */
-				   margin: auto; /* Выравниваем по центру */
-				   background: #fc0; /* Цвет фона */
-				  }
-				 </style>
-		</head>
-		<body>
-		<p><a href="/registrationPage">Регистрация</a></p>
-			<form method="post" enctype="application/x-www-form-urlencoded" action="/authorizationHandler" class="center">
-			<h3>Страница авторизации</h3>
-			<p>
-			  <label>Логин:</label>
-			  <input type="text"  name="login">
-			</p>		
-			<p>
-			  <label >Пароль:</label>
-			  <input type="password"  name="password">
-			</p>		
-			<p class="login-submit">
-			  <button type="submit" class="login-button">Вход</button>
-			</p>
-		  </form>
-		</body>
-		</html>		
-		`))
-}
 
 // registrationHandler - обработчик, который осуществляет регистрацию нового пользователя.
 // Принимет Post запрос с переменными "login" и "password".
@@ -107,7 +33,9 @@ func registrationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Инфо. Добавлен новый пользователь - " + login)
+	log.Println("Инфо. Пользователь " + login + " зарегистрировался.")
+
+	redirectPage(w, "/authorizationPage")
 }
 
 // authorizationHandler - обработчик, который осуществляет авторизация пользователя. Токен записывается в cookie.
@@ -139,9 +67,8 @@ func authorizationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	estimatePass := generateMD5hash(password)
-	answer := bytes.Equal(user.Password[:], estimatePass[:])
 
-	if !answer {
+	if !bytes.Equal(user.Password[:], estimatePass[:]) {
 		sendErrorPage(w, &Error{http.StatusBadRequest, "Неверный пароль."})
 		return
 	}
@@ -152,28 +79,147 @@ func authorizationHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{Name: "token", Value: token})
 
 	log.Println("Инфо. Пользователь " + login + " авторизовался.")
+	redirectPage(w, "/profileHandler")
 }
 
-func test(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("token")
+// addNoteHandler - добавляет новую заметку.
+func addNoteHandler(w http.ResponseWriter, r *http.Request) {
+	login := getLoginFromCookie(w, r)
 
-	if err != nil && err.Error() == "http: named cookie not present" {
-		http.Redirect(w, r, "/authorizationPage", http.StatusUnauthorized)
+	if login == "" {
+		redirectPage(w, "/authorizationPage")
 		return
 	}
 
-	if err != nil {
-		log.Println("Ошибка. При чтении cookie: " + err.Error())
+	note := Note{
+		Author:      login,
+		Header:      r.FormValue("header"),
+		Text:        r.FormValue("text"),
+		CreatedDate: time.Now(),
+	}
+
+	if err := noteColl.Insert(&note); err != nil {
+		log.Println("Ошибка. При вставке в БД новой заметки пользователя(логин - " + login + " ): " + err.Error())
 		sendErrorPage(w, &Error{http.StatusInternalServerError, "Неполадки на сервере, повторите попытку позже."})
 		return
 	}
 
-	if cookie.Value == "" {
-		http.Redirect(w, r, "/authorizationPage", http.StatusUnauthorized)
+	redirectPage(w, "/profileHandler")
+}
+
+// logoutHandler - реализует выход из аккаунта
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{Name: "token", Expires: time.Now().UTC()})
+	redirectPage(w, "/authorizationPage")
+}
+
+// profileHandler - генерирует страницу профиля пользователя с его личными записями
+func profileHandler(w http.ResponseWriter, r *http.Request) {
+	login := getLoginFromCookie(w, r)
+
+	if login == "" {
+		redirectPage(w, "/authorizationPage")
 		return
 	}
 
-	w.Write([]byte("твой токен - " + cookie.Value))
-	w.Write([]byte("\nтвой логин - " + sessions[cookie.Value]))
+	var result []Note
 
+	err := noteColl.Find(bson.M{"author": login}).Sort("-createdDate").All(&result)
+
+	if err != nil {
+		log.Println("Ошибка. При поиске в БД заметок пользователя(логин - " + login + " ): " + err.Error())
+		sendErrorPage(w, &Error{http.StatusInternalServerError, "Неполадки на сервере, повторите попытку позже."})
+		return
+	}
+
+	profile.Execute(w, result)
+}
+
+// deleteNoteHandler - удаляет заметку пользователя.
+func deleteNoteHandler(w http.ResponseWriter, r *http.Request) {
+	login := getLoginFromCookie(w, r)
+
+	if login == "" {
+		redirectPage(w, "/authorizationPage")
+		return
+	}
+
+	id := r.FormValue("id")
+	if !bson.IsObjectIdHex(id) {
+		log.Println("Ошибка. При удалении заметки некорректный id =  " + id)
+		sendErrorPage(w, &Error{http.StatusBadRequest, "Получен некорректный id."})
+		return
+	}
+
+	err := noteColl.RemoveId(bson.ObjectIdHex(id))
+	if err != nil {
+		log.Println("Ошибка. При удалении заметки ( id =  " + id + " )в БД: " + err.Error())
+		sendErrorPage(w, &Error{http.StatusInternalServerError, "Неполадки на сервере, повторите попытку позже."})
+		return
+	}
+
+	redirectPage(w, "/profileHandler")
+
+	log.Println("Инфо. Заметка с id = '" + id + "' удалена.")
+}
+
+// editNoteFormHandler - генерирует страницу для редактирования заметки.
+func editNoteFormHandler(w http.ResponseWriter, r *http.Request) {
+	login := getLoginFromCookie(w, r)
+
+	if login == "" {
+		redirectPage(w, "/authorizationPage")
+		return
+	}
+
+	id := r.FormValue("id")
+	if !bson.IsObjectIdHex(id) {
+		log.Println("Ошибка. При редактировании заметки некорректный id =  " + id)
+		sendErrorPage(w, &Error{http.StatusBadRequest, "Получен некорректный id."})
+		return
+	}
+
+	var result Note
+
+	err := noteColl.FindId(bson.ObjectIdHex(id)).One(&result)
+	if err != nil && err.Error() != "not found" {
+		log.Println("Ошибка. При поиске в БД заметки с id = " + id + " " + err.Error())
+		sendErrorPage(w, &Error{http.StatusInternalServerError, "Неполадки на сервере, повторите попытку позже."})
+		return
+	}
+
+	if err != nil {
+		sendErrorPage(w, &Error{http.StatusBadRequest, "С указанным id нет заметки."})
+		return
+	}
+
+	editNote.Execute(w, result)
+}
+
+// saveEditingHandler - осуществляет изменение заметки.
+func saveEditingHandler(w http.ResponseWriter, r *http.Request) {
+	login := getLoginFromCookie(w, r)
+
+	if login == "" {
+		redirectPage(w, "/authorizationPage")
+		return
+	}
+
+	id := r.FormValue("id")
+	if !bson.IsObjectIdHex(id) {
+		log.Println("Ошибка. При сохранении редактирования некорректный id =  " + id)
+		sendErrorPage(w, &Error{http.StatusBadRequest, "Получен некорректный id."})
+		return
+	}
+
+	err := noteColl.UpdateId(bson.ObjectIdHex(id), bson.M{"$set": bson.M{"header": r.FormValue("header"), "text": r.FormValue("text")}})
+	if err != nil {
+		log.Println("Ошибка. При редактировании в БД заметки с id = " + id + " " + err.Error())
+		sendErrorPage(w, &Error{http.StatusInternalServerError, "Неполадки на сервере, повторите попытку позже."})
+		return
+	}
+
+	redirectPage(w, "/profileHandler")
+
+	log.Println("Инфо. Заметка с id = '" + id + "' отредактирована.")
 }

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<title>NotePad</title>
+		<style>
+			.center {
+			width: 600px; /* Ширина элемента в пикселах */
+			padding: 10px; /* Поля вокруг текста */
+			margin: auto; /* Выравниваем по центру */
+			background: #fc0; /* Цвет фона */
+			}
+		</style>
+	</head>
+	<body>
+		<p><a href="/logoutHandler">Выйти из аккаунта</a></p>
+		<p><a href="/addNotePage">добавить запись</a></p>
+		{{range .}}
+		<div class="center">
+			<p><b>Заголовок: </b>{{.Header}}</p>
+			<p><b>Текст: </b>{{.Text}}</p>
+			<p><b>Дата создания: </b>{{.CreatedDate}}</p>
+			<a href="/deleteNoteHandler?id={{ .ID  | toString}}">Удалить</a>
+			<a href="/editNoteFormHandler?id={{ .ID  | toString}}">Редактировать</a>
+		</div>
+		</br></br>
+		{{end}}
+	</body>
+</html>	

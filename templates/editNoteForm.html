@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<title>NotePad</title>
+		<style>
+			.center {
+				width: 250px; /* Ширина элемента в пикселах */
+				padding: 10px; /* Поля вокруг текста */
+				margin: auto; /* Выравниваем по центру */
+				background: #fc0; /* Цвет фона */
+			}
+		</style>
+	</head>
+	<body>
+	<p><a href="/logoutHandler">Выйти из аккаунта</a> <a href="/profileHandler">Профиль</a></p>
+		<form method="post" enctype="application/x-www-form-urlencoded" action="/saveEditingHandler?id={{ .ID  | toString}}" class="center">
+			<h3>Страница редактирования записи</h3>
+			<p>
+				<label>Заголовок:</label>
+				<input type="text"  name="header" value="{{ .Header }}">
+			</p>		
+			<p>
+				<label >Текст записи:</label>
+				<textarea name="text" cols="33" rows="3" >{{ .Text }}</textarea>
+			</p>		
+				<p> <button type="submit">Применить</button> </p>
+		</form>
+	</body>
+</html>	

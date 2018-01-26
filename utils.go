@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"flag"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -34,6 +35,29 @@ func InitLogger(destination string) *os.File {
 	return logfile
 }
 
+// toString - преобразует bson.ObjectId в строкую
+func toString(s bson.ObjectId) string {
+	return s.Hex()
+}
+
+// initTemplate - инициализирует html шаблоны.
+func initTemplate() {
+	var err error
+	funcMap := template.FuncMap{
+		"toString": toString,
+	}
+
+	profile, err = profile.Funcs(funcMap).ParseFiles("./templates/profile.html")
+	if err != nil {
+		log.Fatal("Фатал. При парсинге страницы профиля: " + err.Error())
+	}
+
+	editNote, err = editNote.Funcs(funcMap).ParseFiles("./templates/editNoteForm.html")
+	if err != nil {
+		log.Fatal("Фатал. При парсинге страницы редактирования записи: " + err.Error())
+	}
+}
+
 // connectToDB - устанавливает соединение с БД и инициализирует глобальные переменные.
 func connectToDB(host string, port int, DBName string) {
 	var err error
@@ -43,6 +67,7 @@ func connectToDB(host string, port int, DBName string) {
 	}
 
 	usersColl = DBsession.DB(DBName).C("users")
+	noteColl = DBsession.DB(DBName).C("notes")
 
 	log.Printf("Инфо. Подключение к базе данных установлено.")
 }
@@ -83,7 +108,7 @@ func sendErrorPage(w http.ResponseWriter, err *Error) {
 	w.Write([]byte(`<!DOCTYPE html>
 			<head>
 				<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-				<title>NotePad</title>
+				<title>NotePad</title>				
 				<style>
 				.center {
 					width: 400px; /* Ширина элемента в пикселах */
@@ -98,7 +123,7 @@ func sendErrorPage(w http.ResponseWriter, err *Error) {
 					<h1>Произошла ошибка!</h1>
 					<p>Статус: ` + strconv.Itoa(err.Status) + `</p>
 					<p>Информация: ` + err.Text + `</p>
-					<p><a href="/registrationPage">Регистрация</a> <a href="/authorizationPage">  Авторизация</a></p>
+					<p><a href="registrationPage">Регистрация</a> <a href="authorizationPage">  Авторизация</a> <a href="profileHandler">  Профиль</a></p>
 				</div>
 			</body>
 		</html>		
@@ -129,4 +154,34 @@ func generateToken() string {
 	}
 
 	return token.String()
+}
+
+// getLoginFromCookie - проверяет cookie с токеном в браузере пользователя,
+// и в случае его наличия возвращает логин пользовател.
+func getLoginFromCookie(w http.ResponseWriter, r *http.Request) string {
+	cookie, err := r.Cookie("token")
+
+	if err != nil && err.Error() == "http: named cookie not present" {
+		redirectPage(w, "/authorizationPage")
+		return ""
+	}
+
+	if err != nil {
+		log.Println("Ошибка. При чтении cookie: " + err.Error())
+		sendErrorPage(w, &Error{http.StatusInternalServerError, "Неполадки на сервере, повторите попытку позже."})
+		return ""
+	}
+
+	if cookie.Value == "" {
+		redirectPage(w, "/authorizationPage")
+		return ""
+	}
+
+	return sessions[cookie.Value]
+}
+
+// redirectPage - перенаправляет на другую страницу.
+func redirectPage(w http.ResponseWriter, url string) {
+	w.Header().Add("Location", url)
+	w.WriteHeader(http.StatusFound)
 }

@@ -10,6 +10,7 @@ import (
 
 func main() {
 	InitFlags()
+	initTemplate()
 	logFile := InitLogger(logSource)
 	defer logFile.Close()
 
@@ -24,9 +25,15 @@ func main() {
 
 	http.HandleFunc("/registrationPage", registrationPage)
 	http.HandleFunc("/authorizationPage", authorizationPage)
+	http.HandleFunc("/addNotePage", addNotePage)
+	http.HandleFunc("/addNoteHandler", addNoteHandler)
 	http.HandleFunc("/registrationHandler", registrationHandler)
 	http.HandleFunc("/authorizationHandler", authorizationHandler)
-	http.HandleFunc("/test", test)
+	http.HandleFunc("/logoutHandler", logoutHandler)
+	http.HandleFunc("/profileHandler", profileHandler)
+	http.HandleFunc("/deleteNoteHandler", deleteNoteHandler)
+	http.HandleFunc("/editNoteFormHandler", editNoteFormHandler)
+	http.HandleFunc("/saveEditingHandler", saveEditingHandler)
 
 	err := server.ListenAndServe()
 	if err != nil {

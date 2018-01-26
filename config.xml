@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <config>
-    <http port="8080" host="localhost"></http>
+    <http port="8080" host="0.0.0.0"></http>
     <DataBase>
         <host>localhost</host>
         <port>27017</port>
