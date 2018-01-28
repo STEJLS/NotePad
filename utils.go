@@ -159,6 +159,24 @@ func generateToken() string {
 // getLoginFromCookie - проверяет cookie с токеном в браузере пользователя,
 // и в случае его наличия возвращает логин пользовател.
 func getLoginFromCookie(w http.ResponseWriter, r *http.Request) string {
+	token := getTokenFromCookie(w, r)
+
+	if token == "" {
+		return ""
+	}
+
+	login, ok := sessions[token]
+
+	if !ok || login == "" {
+		redirectPage(w, "/authorizationPage")
+		return ""
+	}
+
+	return login
+}
+
+// getTokenFromCookie - возвращает token авторизации из cookie.
+func getTokenFromCookie(w http.ResponseWriter, r *http.Request) string {
 	cookie, err := r.Cookie("token")
 
 	if err != nil && err.Error() == "http: named cookie not present" {
@@ -177,7 +195,7 @@ func getLoginFromCookie(w http.ResponseWriter, r *http.Request) string {
 		return ""
 	}
 
-	return sessions[cookie.Value]
+	return cookie.Value
 }
 
 // redirectPage - перенаправляет на другую страницу.

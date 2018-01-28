@@ -87,7 +87,6 @@ func addNoteHandler(w http.ResponseWriter, r *http.Request) {
 	login := getLoginFromCookie(w, r)
 
 	if login == "" {
-		redirectPage(w, "/authorizationPage")
 		return
 	}
 
@@ -109,7 +108,15 @@ func addNoteHandler(w http.ResponseWriter, r *http.Request) {
 
 // logoutHandler - реализует выход из аккаунта
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	token := getTokenFromCookie(w, r)
+
+	if token == "" {
+		return
+	}
+
 	http.SetCookie(w, &http.Cookie{Name: "token", Expires: time.Now().UTC()})
+	delete(sessions, token)
+
 	redirectPage(w, "/authorizationPage")
 }
 
@@ -118,7 +125,6 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 	login := getLoginFromCookie(w, r)
 
 	if login == "" {
-		redirectPage(w, "/authorizationPage")
 		return
 	}
 
@@ -140,7 +146,6 @@ func deleteNoteHandler(w http.ResponseWriter, r *http.Request) {
 	login := getLoginFromCookie(w, r)
 
 	if login == "" {
-		redirectPage(w, "/authorizationPage")
 		return
 	}
 
@@ -168,7 +173,6 @@ func editNoteFormHandler(w http.ResponseWriter, r *http.Request) {
 	login := getLoginFromCookie(w, r)
 
 	if login == "" {
-		redirectPage(w, "/authorizationPage")
 		return
 	}
 
@@ -201,7 +205,6 @@ func saveEditingHandler(w http.ResponseWriter, r *http.Request) {
 	login := getLoginFromCookie(w, r)
 
 	if login == "" {
-		redirectPage(w, "/authorizationPage")
 		return
 	}
 

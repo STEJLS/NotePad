@@ -73,6 +73,12 @@ func authorizationPage(w http.ResponseWriter, r *http.Request) {
 
 // addNotePage - вывод статической добавления новой записи.
 func addNotePage(w http.ResponseWriter, r *http.Request) {
+	login := getLoginFromCookie(w, r)
+
+	if login == "" {
+		return
+	}
+
 	w.Write([]byte(`<!DOCTYPE html>
 	<html>
 		<head>
