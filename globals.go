@@ -1,7 +1,11 @@
 package main
 
-import mgo "gopkg.in/mgo.v2"
-import "html/template"
+import (
+	"html/template"
+	"sync"
+
+	mgo "gopkg.in/mgo.v2"
+)
 
 // logFileName - имя файла для логов, задается через флаг командной строки.
 var logSource string
@@ -23,6 +27,9 @@ var salt = [12]byte{152, 123, 2, 1, 6, 84, 216, 35, 140, 158, 69, 128}
 
 // sessions - карта для авторизации пользователей. Ключ токен, а значение - логин.
 var sessions = make(map[string]string)
+
+// lock - Мьютекс для корректной параллельной работы с картой sessions.
+var lock = new(sync.RWMutex)
 
 // profile - шаблон для отображения страницы профиля.
 var profile = template.New("profile.html")

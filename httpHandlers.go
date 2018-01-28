@@ -73,8 +73,10 @@ func authorizationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	lock.Lock()
 	token := generateToken()
 	sessions[token] = login
+	lock.Unlock()
 
 	http.SetCookie(w, &http.Cookie{Name: "token", Value: token})
 
@@ -115,7 +117,10 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{Name: "token", Expires: time.Now().UTC()})
+
+	lock.Lock()
 	delete(sessions, token)
+	lock.Unlock()
 
 	redirectPage(w, "/authorizationPage")
 }

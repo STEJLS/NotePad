@@ -165,7 +165,9 @@ func getLoginFromCookie(w http.ResponseWriter, r *http.Request) string {
 		return ""
 	}
 
+	lock.RLock()
 	login, ok := sessions[token]
+	lock.RUnlock()
 
 	if !ok || login == "" {
 		redirectPage(w, "/authorizationPage")
